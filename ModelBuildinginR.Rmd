@@ -1,0 +1,103 @@
+---
+title: "AnotherProject"
+author: "Mosibudi"
+date: "2024-01-16"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Read in the data
+```{r}
+data <- read.csv("adult.csv",header = T)
+head(data)
+```
+
+# Data Cleaning 
+```{r}
+# removing the questions marks
+idx <- data == "?"   #find the elements
+idx <- is.na(data)#replace elements with NA
+data <- na.omit(data) #remove the NA 
+
+#removing duplicates 
+data <- data[!duplicated(data),]
+
+
+
+# Encoding categorical variable
+data$workclass <- factor(data$workclass)
+data$education <- factor(data$education)
+data$marital.status <- factor(data$marital.status)
+data$occupation <- factor(data$occupation)
+data$relationship <- factor(data$relationship)
+data$race <- factor(data$race)
+data$gender <- factor(data$gender)
+data$native.country <- factor(data$native.country)
+
+#removing unnecessary columns (the fnlwgt column)
+data$fnlwgt <- NULL
+
+library(dplyr)
+glimpse(data)
+```
+
+
+# Data Visualisation
+
+```{r}
+library(tidyverse)
+data |> ggplot(aes(age,income)) + geom_boxplot()
+```
+
+```{r}
+# Create a bar graph
+ggplot(data, aes(x = gender, fill = income)) +
+  geom_bar(position = "dodge", color = "black", stat = "count") +
+  labs(title = "Income Distribution by Gender", x = "Gender", y = "Count") +
+  scale_fill_manual(values = c(">50k" = "blue", "<=50k" = "orange")) +
+  theme_minimal()
+
+```
+
+
+
+```{r}
+ggplot(data, aes(x = race, fill = income)) +  geom_bar() + labs(title = "Income Distribution by Race",y = "frequency")
+```
+
+
+
+# Building a Predictive model 
+
+```{r}
+glimpse(data)
+
+# Standardise numeric variables 
+data$age = scale(data$age)
+data$educational.num = scale(data$educational.num)
+data$capital.gain = scale(data$capital.gain)
+data$capital.loss = scale(data$capital.loss)
+data$hours.per.week = scale(data$hours.per.week)
+
+#Split the data 
+data <- data %>%
+  mutate(Response = if_else(income == ">50K", 1, 0)) # making y a binary variable
+data.train <- slice_sample(data,prop = 0.60)
+data.test <- anti_join(data,data.train)
+
+ 
+
+glimpse(data)
+# glm 
+mod_glm <- glm(Response ~ age + hours.per.week + workclass + educational.num + marital.status +
+               education + occupation + relationship + race + gender + capital.gain + capital.loss  , data = data.train,family = "binomial")
+summary(mod_glm)
+
+pred <- predict(mod_glm,newdata = data.test)
+response2 <- ifelse(pred > 0.5, 1, 0)
+table(response2,data.test$Response)
+```
+
